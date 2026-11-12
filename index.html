@@ -3,72 +3,108 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GeoTrack – Real-Time Location Tracker</title>
+<meta name="theme-color" content="#0f2a35">
+<title>GeoTrack – Real-Time Location Tracker &amp; GIS</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root{--bg:#f3f6f9;--card:#fff;--ink:#14212b;--mute:#5b6b78;--line:#dde4ea;--accent:#0b8a8a;--accent-d:#096f6f;--warn:#d97706;--bad:#dc2626;--ok:#16a34a;--blue:#2563eb}
+  :root{--bg:#eef3f7;--card:#fff;--ink:#14212b;--mute:#5b6b78;--line:#dde4ea;--tile:#f1f5f8;
+        --accent:#0b8a8a;--accent-d:#096f6f;--warn:#d97706;--bad:#dc2626;--ok:#16a34a;--blue:#2563eb;
+        --note-warn:#fff8e6;--note-warn-b:#f3dfa2;--note-info:#eaf5ff;--note-info-b:#bcdcf6;--note-good:#eafaf0;--note-good-b:#b6e5c6}
+  [data-theme="dark"]{--bg:#0b141a;--card:#111d25;--ink:#e6eef3;--mute:#93a4b1;--line:#243642;--tile:#18262f;
+        --accent:#2bb5b5;--accent-d:#46c7c7;--note-warn:#2b2412;--note-warn-b:#5c4a1a;--note-info:#12263a;--note-info-b:#25506f;--note-good:#112b1b;--note-good-b:#245c3a}
+  [data-theme="dark"] .osm-tiles{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
-  header{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#0f2a35;color:#fff}
-  header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
-  header h1 small{font-weight:400;opacity:.7;font-size:12px;margin-left:8px}
-  .hdr-right{display:flex;gap:10px;align-items:center}
-  .pill{font-size:12px;padding:4px 10px;border-radius:999px;background:#33505e;color:#fff}
+  header{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:linear-gradient(120deg,#0f2a35,#0b5560 60%,#0b8a8a);color:#fff}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand svg{width:30px;height:30px}
+  .brand h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.3px;line-height:1}
+  .brand small{display:block;font-weight:400;opacity:.8;font-size:11px;margin-top:3px}
+  .hdr-right{display:flex;gap:8px;align-items:center}
+  .pill{font-size:12px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;white-space:nowrap}
   .pill.gps{background:var(--ok)}.pill.sim{background:var(--warn)}
-  main{display:flex;height:calc(100vh - 52px);height:calc(100dvh - 52px)}
-  #panel{width:380px;max-width:100%;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
-  #map{flex:1;min-height:200px}
-  .tabs{display:flex;border-bottom:1px solid var(--line)}
-  .tabs button{flex:1;padding:11px 4px;border:0;background:none;font-size:13px;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent}
+  .icon-btn{border:0;background:rgba(255,255,255,.18);color:#fff;width:32px;height:32px;border-radius:50%;font-size:15px;cursor:pointer}
+  .icon-btn:hover{background:rgba(255,255,255,.3)}
+  main{display:flex;height:calc(100vh - 56px);height:calc(100dvh - 56px)}
+  #panel{width:400px;max-width:100%;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  #mapwrap{flex:1;position:relative;min-height:200px}
+  #map{position:absolute;inset:0}
+  #searchForm{position:absolute;top:10px;left:56px;right:60px;z-index:1000;display:flex;gap:6px;max-width:420px}
+  #searchForm input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  #searchForm button{padding:0 14px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  .tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
+  .tabs button{flex:1 0 auto;padding:12px 12px;border:0;background:none;font-size:13px;font-weight:700;color:var(--mute);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
   .tabs button.active{color:var(--accent);border-bottom-color:var(--accent)}
   .tab{display:none;padding:14px;overflow-y:auto;flex:1}
   .tab.active{display:block}
-  h2{font-size:14px;margin:16px 0 8px;text-transform:uppercase;letter-spacing:.6px;color:var(--mute)}
+  h2{font-size:12.5px;margin:18px 0 8px;text-transform:uppercase;letter-spacing:.7px;color:var(--mute)}
   h2:first-child{margin-top:0}
-  button.btn{border:0;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+  button.btn{border:0;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;background:var(--accent);color:#fff;transition:transform .08s,background .15s}
   button.btn:hover:not(:disabled){background:var(--accent-d)}
+  button.btn:active:not(:disabled){transform:scale(.97)}
   button.btn:disabled{opacity:.45;cursor:not-allowed}
-  button.btn.sec{background:#e6edf2;color:var(--ink)}
-  button.btn.sec:hover:not(:disabled){background:#d6e0e8}
+  button.btn.sec{background:var(--tile);color:var(--ink);border:1px solid var(--line)}
+  button.btn.sec:hover:not(:disabled){background:var(--line)}
+  button.btn.sec.on{background:var(--accent);color:#fff}
   button.btn.danger{background:var(--bad)}
+  button.btn.sm{padding:7px 11px;font-size:13px}
   .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .stat{background:var(--bg);border-radius:8px;padding:8px 10px}
-  .stat span{display:block;font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.4px}
+  .stat{background:var(--tile);border-radius:10px;padding:9px 11px}
+  .stat span{display:block;font-size:10.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px}
   .stat b{font-size:15px;word-break:break-word}
-  .note{font-size:13px;line-height:1.45;background:#fff8e6;border:1px solid #f3dfa2;border-radius:8px;padding:10px;margin:10px 0}
-  .note.info{background:#eaf5ff;border-color:#bcdcf6}
-  .note.good{background:#eafaf0;border-color:#b6e5c6}
+  .note{font-size:13px;line-height:1.5;background:var(--note-warn);border:1px solid var(--note-warn-b);border-radius:10px;padding:10px 12px;margin:10px 0}
+  .note.info{background:var(--note-info);border-color:var(--note-info-b)}
+  .note.good{background:var(--note-good);border-color:var(--note-good-b)}
+  .cmp .big{font-size:30px;font-weight:800;color:var(--ok)}
+  .steps{display:flex;gap:8px;margin:6px 0 14px}
+  .steps div{flex:1;background:var(--tile);border-radius:12px;padding:10px 8px;text-align:center;font-size:12px;line-height:1.35}
+  .steps b{display:block;width:26px;height:26px;line-height:26px;margin:0 auto 6px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px}
+  .chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;background:var(--line);color:var(--ink)}
+  .q-ex{background:#bbf7d0;color:#14532d}.q-go{background:#d9f99d;color:#365314}.q-fa{background:#fde68a;color:#78350f}.q-po{background:#fecaca;color:#7f1d1d}
   label{font-size:13px}
   select,input[type=range]{width:100%}
-  select{padding:8px;border-radius:8px;border:1px solid var(--line)}
+  select{padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
   ul.log{list-style:none;padding:0;margin:6px 0;font-size:13px;max-height:140px;overflow-y:auto}
   ul.log li{padding:5px 0;border-bottom:1px solid var(--line)}
+  .out{font-size:13px;color:var(--mute);margin:4px 0;word-break:break-word}
   .chartbox{height:170px}
-  .tab p,.tab li{font-size:13.5px;line-height:1.5}
+  .tab p,.tab li{font-size:13.5px;line-height:1.55}
   .tab ul.plain{padding-left:18px;margin:6px 0}
-  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f2a35;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:3000;max-width:90vw;text-align:center}
+  table.cmpt{width:100%;border-collapse:collapse;font-size:12px}
+  table.cmpt th,table.cmpt td{border:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:top}
+  table.cmpt th{background:var(--tile)}
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f2a35;color:#fff;padding:11px 18px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:5000;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
   #toast.show{opacity:1}
-  #consent{position:fixed;inset:0;background:rgba(10,20,28,.6);display:none;align-items:center;justify-content:center;z-index:4000;padding:16px}
+  #consent{position:fixed;inset:0;background:rgba(10,20,28,.65);display:none;align-items:center;justify-content:center;z-index:6000;padding:16px}
   #consent.show{display:flex}
-  #consent .box{background:#fff;border-radius:14px;max-width:460px;padding:22px}
+  #consent .box{background:var(--card);color:var(--ink);border-radius:16px;max-width:460px;padding:22px}
   #consent h3{margin:0 0 8px}
   #consent p,#consent li{font-size:14px;line-height:1.5}
+  .me-pulse{position:relative;width:24px;height:24px}
+  .me-pulse i{position:absolute;inset:0;border-radius:50%;background:rgba(37,99,235,.35);animation:pulse 1.8s ease-out infinite}
+  .me-pulse b{position:absolute;inset:5px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45)}
+  @keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.9);opacity:0}}
   .leaflet-container{font-family:inherit}
   @media (max-width:820px){
     main{flex-direction:column}
-    #map{order:-1;flex:none;height:46vh}
+    #mapwrap{order:-1;flex:none;height:46vh}
     #panel{width:100%;flex:1;border-right:0;border-top:1px solid var(--line)}
-    header h1 small{display:none}
+    .brand small{display:none}
+    #searchForm{right:56px}
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>GeoTrack<small>Real-time location tracking &amp; GIS</small></h1>
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="rgba(255,255,255,.15)"/><path d="M16 5a8 8 0 0 0-8 8c0 6 8 14 8 14s8-8 8-14a8 8 0 0 0-8-8z" fill="#fff"/><circle cx="16" cy="13" r="3.2" fill="#0b8a8a"/></svg>
+    <div><h1>GeoTrack</h1><small>Real-time location tracking &amp; GIS</small></div>
+  </div>
   <div class="hdr-right">
     <span id="status" class="pill">Idle</span>
-    <button id="btnStopTop" class="btn danger" style="padding:6px 12px;font-size:13px" disabled>Stop</button>
+    <button id="btnStopTop" class="btn danger sm" disabled>Stop</button>
+    <button id="btnTheme" class="icon-btn" aria-label="Toggle dark mode" title="Light / dark mode">☾</button>
   </div>
 </header>
 
@@ -78,15 +114,21 @@
       <button data-tab="ip" class="active">IP Mode</button>
       <button data-tab="gps">GPS Mode</button>
       <button data-tab="analysis">Analysis</button>
+      <button data-tab="learn">Learn</button>
       <button data-tab="privacy">Privacy</button>
     </nav>
 
     <!-- IP MODE -->
     <section id="tab-ip" class="tab active">
+      <div class="steps">
+        <div><b>1</b>Locate by IP</div>
+        <div><b>2</b>Start GPS on a phone</div>
+        <div><b>3</b>Compare in Analysis</div>
+      </div>
       <h2>Locate a laptop by IP address</h2>
-      <p>Finds the approximate position of this device from its public IP address using a geolocation database.</p>
+      <p style="margin-top:0">Finds the approximate position of this device from its public IP address using a geolocation database.</p>
       <div class="row"><button id="btnIP" class="btn">Locate by IP</button></div>
-      <p id="ipMsg" style="color:var(--mute);font-size:13px"></p>
+      <p id="ipMsg" class="out"></p>
       <div class="grid">
         <div class="stat"><span>IP address</span><b id="ipAddr">–</b></div>
         <div class="stat"><span>ISP / network</span><b id="ipIsp">–</b></div>
@@ -96,9 +138,8 @@
         <div class="stat"><span>Longitude</span><b id="ipLon">–</b></div>
       </div>
       <div class="note">
-        <b>Accuracy limits:</b> IP location usually points to the ISP's registered hub, not your exact spot. Expect country-level to be reliable, city-level uncertain (often 5 to 50+ km off). VPNs, proxies and shared (CGNAT) addresses make it worse. The dashed orange circle on the map is an illustrative ~25 km uncertainty zone.
+        <b>Accuracy limits:</b> IP location usually points to the ISP's registered hub, not your exact spot. Country level is reliable, city level is uncertain (often 5 to 50+ km off, sometimes hundreds). VPNs, proxies and shared (CGNAT) addresses make it worse. The dashed orange circle is an illustrative ~25 km uncertainty zone.
       </div>
-      <div class="note info">Next: switch to <b>GPS Mode</b> to get a precise fix, then open <b>Analysis</b> to see how far the IP estimate was from the truth.</div>
     </section>
 
     <!-- GPS MODE -->
@@ -114,15 +155,27 @@
       <div class="grid" style="margin-top:12px">
         <div class="stat"><span>Latitude</span><b id="sLat">–</b></div>
         <div class="stat"><span>Longitude</span><b id="sLon">–</b></div>
-        <div class="stat"><span>Accuracy</span><b id="sAcc">–</b></div>
+        <div class="stat"><span>Accuracy</span><b id="sAcc">–</b> <span class="chip" id="sQual" style="display:inline-block;text-transform:none;letter-spacing:0">–</span></div>
         <div class="stat"><span>Speed</span><b id="sSpeed">–</b></div>
         <div class="stat"><span>Distance</span><b id="sDist">–</b></div>
         <div class="stat"><span>Duration</span><b id="sDur">–</b></div>
+        <div class="stat"><span>Heading</span><b id="sHead">–</b></div>
+        <div class="stat"><span>Altitude</span><b id="sAlt">–</b></div>
       </div>
+
+      <h2>Map tools</h2>
+      <div class="row">
+        <button id="btnWhere" class="btn sec sm">Where am I? (address)</button>
+        <button id="btnShare" class="btn sec sm">Share my position</button>
+        <button id="btnMeasure" class="btn sec sm">Measure distance</button>
+        <button id="btnReplay" class="btn sec sm">Replay journey</button>
+      </div>
+      <p id="whereOut" class="out"></p>
+      <p id="measOut" class="out"></p>
 
       <h2>No GPS on your laptop? Demo it</h2>
       <p style="margin-top:0">Runs a clearly labelled <b>simulated</b> moving object so you can demonstrate the trail, speed chart and geofence from any device.</p>
-      <select id="simSpeed">
+      <select id="simSpeed" aria-label="Simulated speed">
         <option value="1.4">Walking (about 5 km/h)</option>
         <option value="5">Cycling (about 18 km/h)</option>
         <option value="14">Driving (about 50 km/h)</option>
@@ -133,15 +186,18 @@
       <label>Radius: <b id="fenceRLabel">200</b> m</label>
       <input type="range" id="fenceR" min="20" max="2000" step="10" value="200">
       <div class="row">
-        <button id="btnPick" class="btn sec">Pick centre on map</button>
-        <button id="btnFenceHere" class="btn sec">Use my position</button>
-        <button id="btnFenceClear" class="btn sec">Remove</button>
+        <button id="btnPick" class="btn sec sm">Pick centre on map</button>
+        <button id="btnFenceHere" class="btn sec sm">Use my position</button>
+        <button id="btnFenceClear" class="btn sec sm">Remove</button>
       </div>
       <ul class="log" id="fenceLog"><li style="color:var(--mute)">No geofence events yet.</li></ul>
     </section>
 
     <!-- ANALYSIS -->
     <section id="tab-analysis" class="tab">
+      <h2>IP estimate vs GPS</h2>
+      <div id="cmp" class="note info cmp">Run IP Mode, then get a real GPS fix to compare the two. A dashed red line on the map will show the error.</div>
+
       <h2>Spatial analysis</h2>
       <div class="grid">
         <div class="stat"><span>Points recorded</span><b id="aCount">0</b></div>
@@ -151,31 +207,74 @@
         <div class="stat" style="grid-column:span 2"><span>Area covered (convex hull)</span><b id="aArea">–</b></div>
       </div>
 
-      <h2>IP estimate vs GPS</h2>
-      <div id="cmp" class="note info">Run IP Mode and then get a GPS fix to compare the two. The dashed red line on the map shows the error.</div>
-
       <h2>Speed over time</h2>
       <div class="chartbox"><canvas id="speedChart"></canvas></div>
 
       <h2>Data</h2>
       <div class="row">
-        <button id="btnExport" class="btn">Export GeoJSON</button>
-        <button id="btnClear" class="btn sec">Clear all data</button>
+        <button id="btnExport" class="btn sm">Export GeoJSON</button>
+        <button id="btnCsv" class="btn sm">Export CSV</button>
+        <button id="btnClear" class="btn sec sm">Clear all data</button>
       </div>
+    </section>
+
+    <!-- LEARN -->
+    <section id="tab-learn" class="tab">
+      <h2>How positions are found</h2>
+      <table class="cmpt">
+        <tr><th></th><th>IP address</th><th>GPS</th><th>Cell tower</th><th>Wi-Fi</th></tr>
+        <tr><th>Typical accuracy</th><td>City level, often 5 to 50+ km off</td><td>About 3 to 10 m outdoors</td><td>About 100 m to several km</td><td>About 10 to 50 m</td></tr>
+        <tr><th>Works indoors</th><td>Yes</td><td>Poorly</td><td>Yes</td><td>Yes</td></tr>
+        <tr><th>Battery use</th><td>None</td><td>High</td><td>Low</td><td>Low</td></tr>
+        <tr><th>Needs</th><td>Internet connection</td><td>Clear sky view</td><td>Mobile network</td><td>Nearby known networks</td></tr>
+      </table>
+
+      <h2>How IP location is determined</h2>
+      <p style="margin-top:0">IP blocks are allocated to ISPs by regional registries. Geolocation databases map each block to a place using registry records, ISP-supplied data, routing information and latency measurements. The result usually points to the ISP's hub or office, which is why many Ugandan users appear to be in Kampala wherever they really are.</p>
+
+      <h2>GPS vs cell tower: pros and cons</h2>
+      <ul class="plain">
+        <li><b>GPS pros:</b> very precise, independent of the network. <b>Cons:</b> weak indoors, slow cold start, drains battery.</li>
+        <li><b>Cell tower pros:</b> works indoors, fast, low power. <b>Cons:</b> coarse, depends on tower density, controlled by the carrier.</li>
+        <li>Phones combine both with Wi-Fi (A-GPS). You saw this in action: the first fix is a coarse network guess, then it snaps to a precise GPS fix.</li>
+      </ul>
+
+      <h2>Other uses of this technology</h2>
+      <ul class="plain">
+        <li>Fleet, boda-boda and delivery tracking.</li>
+        <li>School bus tracking for parents.</li>
+        <li>Livestock and asset tracking.</li>
+        <li>Emergency SOS and disaster response.</li>
+        <li>Field data collection for health and agriculture.</li>
+        <li>Geofenced alerts, such as leaving a safe zone.</li>
+      </ul>
+      <p><b>Technologies that enable them:</b> GNSS (GPS and others), BLE/RFID beacons, LoRaWAN IoT trackers, Google Maps and Mapbox, OpenStreetMap, PostGIS, and Firebase or WebSockets for live sharing.</p>
+
+      <h2>How this app is built</h2>
+      <ul class="plain">
+        <li><b>Leaflet + OpenStreetMap:</b> interactive map.</li>
+        <li><b>Browser Geolocation API:</b> live position (<code>watchPosition</code>).</li>
+        <li><b>Turf.js:</b> distance, area, buffers and geofence maths.</li>
+        <li><b>Leaflet.heat and Chart.js:</b> heatmap and speed chart.</li>
+        <li><b>Nominatim:</b> place search and address lookup.</li>
+        <li><b>GitHub Pages:</b> free HTTPS hosting, required for GPS in browsers.</li>
+      </ul>
+      <p style="color:var(--mute);font-size:12.5px">Course project, Mbarara University of Science and Technology.</p>
     </section>
 
     <!-- PRIVACY -->
     <section id="tab-privacy" class="tab">
       <h2>Privacy and safeguards</h2>
-      <div class="note good">Location is personal data. This app is built to collect as little as possible and to keep you in control.</div>
+      <div class="note good">Location is personal data. This app collects as little as possible and keeps you in control.</div>
       <ul class="plain">
         <li><b>Explicit consent:</b> nothing real is tracked until you agree in the consent box and your browser permission prompt.</li>
         <li><b>You are in control:</b> the Stop button is always visible in the header, and "Clear all data" wipes everything.</li>
         <li><b>Data minimisation:</b> only coordinates, accuracy, speed and time are used. No name, account or device ID.</li>
-        <li><b>Stays on your device:</b> the trail is held in browser memory only and is lost on refresh. This app has no server and stores nothing.</li>
-        <li><b>Third parties:</b> the IP lookup sends a request to an IP-geolocation service (which sees your IP), and map tiles are fetched from OpenStreetMap and Esri.</li>
+        <li><b>Stays on your device:</b> the trail is held in browser memory only and is lost on refresh. This app has no server and stores no location. Only your light/dark preference is saved.</li>
+        <li><b>Third parties, only when you ask:</b> the IP lookup contacts an IP-geolocation service (which sees your IP). "Where am I?" and place search contact OpenStreetMap's Nominatim. Map tiles come from OpenStreetMap and Esri.</li>
+        <li><b>Sharing is deliberate:</b> "Share my position" creates a one-time snapshot link only when you tap it. It is not live.</li>
         <li><b>Secure transport:</b> HTTPS is required by browsers for the Geolocation API.</li>
-        <li><b>Transparency:</b> a visible status badge shows whether tracking is idle, live or simulated.</li>
+        <li><b>Transparency:</b> the status badge shows whether tracking is idle, live or simulated.</li>
         <li><b>Law and ethics:</b> tracking another person needs their informed consent, in line with Uganda's Data Protection and Privacy Act 2019 and principles such as GDPR.</li>
       </ul>
       <h2>Risks to be aware of</h2>
@@ -187,7 +286,13 @@
     </section>
   </aside>
 
-  <div id="map"></div>
+  <div id="mapwrap">
+    <div id="map"></div>
+    <form id="searchForm" autocomplete="off">
+      <input id="searchInput" type="search" placeholder="Search a place, e.g. Mbarara" aria-label="Search a place">
+      <button type="submit">Go</button>
+    </form>
+  </div>
 </main>
 
 <div id="consent">
@@ -216,9 +321,19 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var fmt = function (n, d) { return (n == null || isNaN(n)) ? '–' : Number(n).toFixed(d == null ? 5 : d); };
+  var root = document.documentElement;
+
+  /* ---------- Theme ---------- */
+  function setTheme(t) {
+    root.setAttribute('data-theme', t); $('btnTheme').textContent = t === 'dark' ? '☀' : '☾';
+    try { localStorage.setItem('gt-theme', t); } catch (e) { /* storage unavailable */ }
+  }
+  var savedTheme = null; try { savedTheme = localStorage.getItem('gt-theme'); } catch (e) { /* ignore */ }
+  setTheme(savedTheme || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('btnTheme').onclick = function () { setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); };
 
   /* ---------- Map and layers ---------- */
-  var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' });
+  var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'osm-tiles', attribution: '&copy; OpenStreetMap contributors' });
   var sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles &copy; Esri' });
   var map = L.map('map', { layers: [osm] }).setView([1.37, 32.29], 7);
   var trail = L.polyline([], { color: '#0b8a8a', weight: 5, opacity: 0.9 }).addTo(map);
@@ -226,6 +341,7 @@
   var ipLayer = L.layerGroup().addTo(map);
   var gpsLayer = L.layerGroup().addTo(map);
   var fenceLayer = L.layerGroup().addTo(map);
+  var toolLayer = L.layerGroup().addTo(map);     // search result, measure, replay, shared point
   var gapLine = L.polyline([], { color: '#dc2626', dashArray: '6 8', weight: 2 });
   L.control.layers({ 'Street map': osm, 'Satellite': sat },
     { 'Trail': trail, 'Heatmap': heat, 'IP estimate': ipLayer, 'Live position': gpsLayer, 'Geofence': fenceLayer },
@@ -235,14 +351,16 @@
 
   /* ---------- State ---------- */
   var S = { mode: 'idle', watchId: null, simTimer: null, pts: [], dist: 0, maxSpeed: 0, t0: null, tEnd: null,
-            ip: null, fence: null, inside: null, last: null };
-  var me = null, meAcc = null, chart = null, pickingFence = false;
+            ip: null, fence: null, inside: null, last: null, warned: false };
+  var me = null, meAcc = null, chart = null, pickingFence = false, measuring = false, mPts = [], mLine = null, replayTimer = null;
+  var MAX_ACC = 50;     // metres: GPS fixes worse than this are shown but not recorded
+  var MAX_SPEED = 50;   // m/s (180 km/h): faster jumps between fixes are treated as errors
 
   /* ---------- Helpers ---------- */
   var toastTimer;
   function toast(msg) {
     var t = $('toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3500);
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 4000);
   }
   function fmtDur(ms) {
     var s = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
@@ -250,6 +368,22 @@
     return (h ? h + 'h ' : '') + (m || h ? m + 'm ' : '') + s + 's';
   }
   function fmtDist(m) { return m >= 1000 ? (m / 1000).toFixed(2) + ' km' : Math.round(m) + ' m'; }
+  function cardinal(deg) { return ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(deg / 45) % 8]; }
+  function quality(acc) {
+    if (acc == null || isNaN(acc)) return ['–', ''];
+    if (acc <= 10) return ['Excellent', 'q-ex'];
+    if (acc <= 30) return ['Good', 'q-go'];
+    if (acc <= MAX_ACC) return ['Fair', 'q-fa'];
+    return ['Poor', 'q-po'];
+  }
+  function beep() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      var c = new AC(), o = c.createOscillator(), g = c.createGain();
+      o.connect(g); g.connect(c.destination); o.frequency.value = 880; g.gain.value = 0.08;
+      o.start(); setTimeout(function () { o.stop(); c.close(); }, 250);
+    } catch (e) { /* audio blocked */ }
+  }
   function setMode(m) {
     S.mode = m;
     var p = $('status');
@@ -325,7 +459,8 @@
 
   /* ---------- Tracking ---------- */
   function resetData() {
-    S.pts = []; S.dist = 0; S.maxSpeed = 0; S.last = null; S.t0 = null; S.tEnd = null; S.inside = null;
+    stopReplay();
+    S.pts = []; S.dist = 0; S.maxSpeed = 0; S.last = null; S.t0 = null; S.tEnd = null; S.inside = null; S.warned = false;
     trail.setLatLngs([]); heat.setLatLngs([]); gpsLayer.clearLayers(); me = meAcc = null;
     if (chart) { chart.data.labels = []; chart.data.datasets[0].data = []; chart.update(); }
     renderStats(); updateGap();
@@ -343,8 +478,8 @@
       stopAll(); resetData(); S.t0 = Date.now(); setMode('gps');
       toast('Waiting for a GPS fix… allow location in the browser prompt.');
       S.watchId = navigator.geolocation.watchPosition(function (p) {
-        handle({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy,
-                 speed: p.coords.speed, t: p.timestamp || Date.now(), src: 'gps' });
+        handle({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy, speed: p.coords.speed,
+                 heading: p.coords.heading, alt: p.coords.altitude, t: p.timestamp || Date.now(), src: 'gps' });
       }, function (err) {
         var msg = { 1: 'Permission denied. Allow location access for this site.', 2: 'Position unavailable. Try near a window or outdoors.', 3: 'Timed out waiting for a fix.' }[err.code] || err.message;
         toast(msg);
@@ -363,15 +498,16 @@
       if (bearing > 180) bearing -= 360; if (bearing < -180) bearing += 360;
       var sp = speed * (0.9 + Math.random() * 0.2);
       pos = turf.destination(pos, sp / 1000, bearing, { units: 'kilometers' }).geometry.coordinates;
-      handle({ lat: pos[1], lon: pos[0], acc: 8, speed: sp, t: Date.now(), src: 'simulated' });
+      handle({ lat: pos[1], lon: pos[0], acc: 8, speed: sp, heading: (bearing + 360) % 360, alt: null, t: Date.now(), src: 'simulated' });
     }
     tick(); S.simTimer = setInterval(tick, 1000);
     toast('Simulation running. This is demo data, not your real location.');
   }
+  var meIcon = L.divIcon({ className: '', html: '<div class="me-pulse"><i></i><b></b></div>', iconSize: [24, 24], iconAnchor: [12, 12] });
   function drawMe(pt) {
     var ll = [pt.lat, pt.lon];
     if (!me) {
-      me = L.circleMarker(ll, { radius: 9, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(gpsLayer);
+      me = L.marker(ll, { icon: meIcon, interactive: false, keyboard: false }).addTo(gpsLayer);
       meAcc = L.circle(ll, { radius: pt.acc || 20, color: '#2563eb', weight: 1, fillOpacity: 0.12 }).addTo(gpsLayer);
       map.setView(ll, Math.max(map.getZoom(), 16));
     } else {
@@ -383,7 +519,19 @@
     var prev = S.pts[S.pts.length - 1];
     var d = prev ? turf.distance([prev.lon, prev.lat], [pt.lon, pt.lat], { units: 'kilometers' }) * 1000 : 0;
     S.last = pt; drawMe(pt);
-    if (prev && pt.src === 'gps' && d < 2) { renderStats(); return; }   // ignore GPS jitter under 2 m
+    if (pt.src === 'gps') {
+      // Phones often give a coarse first fix (cell/Wi-Fi, hundreds of metres), then jump to a precise GPS fix.
+      // Only record good fixes so the trail, distance and speed are not polluted by that jump.
+      if (pt.acc > MAX_ACC) {
+        if (!S.warned) { S.warned = true; toast('Waiting for an accurate GPS fix (now ±' + Math.round(pt.acc) + ' m). Move outdoors for a faster lock.'); }
+        renderStats(); return;
+      }
+      if (prev) {
+        var dtS = (pt.t - prev.t) / 1000;
+        if (d < Math.max(2, pt.acc * 0.5)) { renderStats(); return; }        // inside the noise: not real movement
+        if (dtS > 0 && d / dtS > MAX_SPEED) { renderStats(); return; }        // physically implausible jump: discard
+      }
+    }
     if (pt.speed == null || isNaN(pt.speed)) {
       var dt = prev ? (pt.t - prev.t) / 1000 : 0; pt.speed = dt > 0 ? d / dt : 0;
     }
@@ -398,7 +546,10 @@
     $('sLat').textContent = p ? fmt(p.lat) : '–';
     $('sLon').textContent = p ? fmt(p.lon) : '–';
     $('sAcc').textContent = p && p.acc != null ? '±' + Math.round(p.acc) + ' m' : '–';
+    var q = quality(p ? p.acc : null); $('sQual').textContent = q[0]; $('sQual').className = 'chip ' + q[1];
     $('sSpeed').textContent = p && p.speed != null ? (p.speed * 3.6).toFixed(1) + ' km/h' : '–';
+    $('sHead').textContent = p && p.heading != null && !isNaN(p.heading) ? Math.round(p.heading) + '° ' + cardinal(p.heading) : '–';
+    $('sAlt').textContent = p && p.alt != null && !isNaN(p.alt) ? Math.round(p.alt) + ' m' : '–';
     $('sDist').textContent = S.pts.length ? fmtDist(S.dist) : '–';
     var dur = S.t0 ? ((S.mode === 'idle' ? S.tEnd : Date.now()) - S.t0) : 0;
     $('sDur').textContent = S.t0 ? fmtDur(dur) : '–';
@@ -410,7 +561,7 @@
     var area = '–';
     if (S.pts.length >= 3) {
       try {
-        var hull = turf.convex(turf.featureCollection(S.pts.map(function (q) { return turf.point([q.lon, q.lat]); })));
+        var hull = turf.convex(turf.featureCollection(S.pts.map(function (q2) { return turf.point([q2.lon, q2.lat]); })));
         if (hull) { var a = turf.area(hull); area = a >= 10000 ? (a / 10000).toFixed(2) + ' ha' : Math.round(a) + ' m²'; }
       } catch (e) { /* collinear points: no hull */ }
     }
@@ -420,16 +571,20 @@
 
   function updateGap() {
     var box = $('cmp');
+    box.innerHTML = '';
     if (S.ip && S.last && S.last.src === 'gps') {
       var km = turf.distance([S.ip.lon, S.ip.lat], [S.last.lon, S.last.lat], { units: 'kilometers' });
       gapLine.setLatLngs([[S.ip.lat, S.ip.lon], [S.last.lat, S.last.lon]]); ipLayer.addLayer(gapLine);
-      box.className = 'note good';
-      box.textContent = 'The IP estimate is ' + km.toFixed(2) + ' km from the GPS position (GPS accuracy ±' + Math.round(S.last.acc || 0) + ' m). This is the error of IP-based location for this device.';
+      box.className = 'note good cmp';
+      var big = document.createElement('div'); big.className = 'big'; big.textContent = km.toFixed(1) + ' km';
+      var t = document.createElement('div');
+      t.textContent = 'between the IP estimate and your real GPS position (GPS accuracy ±' + Math.round(S.last.acc || 0) + ' m). This is how far off IP-based location was for this device.';
+      box.append(big, t);
     } else {
-      ipLayer.removeLayer(gapLine); box.className = 'note info';
+      ipLayer.removeLayer(gapLine); box.className = 'note info cmp';
       box.textContent = S.ip && S.last && S.last.src === 'simulated'
         ? 'Comparison is hidden during simulation because simulated points are not a real position.'
-        : 'Run IP Mode and then get a real GPS fix to compare the two. A dashed red line on the map will show the error.';
+        : 'Run IP Mode, then get a real GPS fix to compare the two. A dashed red line on the map will show the error.';
     }
   }
 
@@ -469,7 +624,7 @@
     var li = document.createElement('li'); li.dataset.empty = 'no';
     li.textContent = new Date().toLocaleTimeString() + '  ' + msg;
     ul.insertBefore(li, ul.firstChild);
-    if (alertUser) { toast('Geofence: ' + msg); if (navigator.vibrate) navigator.vibrate(200); }
+    if (alertUser) { toast('Geofence: ' + msg); beep(); if (navigator.vibrate) navigator.vibrate(200); }
   }
   function checkFence(pt) {
     if (!S.fence) return;
@@ -488,18 +643,97 @@
     $('fenceRLabel').textContent = this.value;
     if (S.fence) { S.fence.r = +this.value; drawFence(); if (S.last) checkFence(S.last); }
   };
-  $('btnPick').onclick = function () { pickingFence = true; map.getContainer().style.cursor = 'crosshair'; toast('Tap the map to place the geofence centre.'); };
-  map.on('click', function (e) {
-    if (!pickingFence) return;
-    pickingFence = false; map.getContainer().style.cursor = ''; setFence(e.latlng.lat, e.latlng.lng);
-  });
+  $('btnPick').onclick = function () { pickingFence = true; setMeasure(false); map.getContainer().style.cursor = 'crosshair'; toast('Tap the map to place the geofence centre.'); };
   $('btnFenceHere').onclick = function () {
     if (!S.last) { toast('Start tracking first so there is a position to use.'); return; }
     setFence(S.last.lat, S.last.lon);
   };
   $('btnFenceClear').onclick = function () { S.fence = null; S.inside = null; drawFence(); toast('Geofence removed.'); };
 
+  /* ---------- Map click: geofence picker or measure tool ---------- */
+  function setMeasure(on) {
+    measuring = on; $('btnMeasure').classList.toggle('on', on);
+    $('btnMeasure').textContent = on ? 'Measuring… tap to finish' : 'Measure distance';
+    if (on) { pickingFence = false; mPts = []; if (mLine) { toolLayer.removeLayer(mLine); mLine = null; } $('measOut').textContent = 'Tap two or more points on the map.'; map.getContainer().style.cursor = 'crosshair'; }
+    else if (!pickingFence) map.getContainer().style.cursor = '';
+  }
+  $('btnMeasure').onclick = function () { setMeasure(!measuring); };
+  map.on('click', function (e) {
+    if (pickingFence) {
+      pickingFence = false; map.getContainer().style.cursor = ''; setFence(e.latlng.lat, e.latlng.lng); return;
+    }
+    if (measuring) {
+      mPts.push([e.latlng.lat, e.latlng.lng]);
+      if (!mLine) mLine = L.polyline(mPts, { color: '#7c3aed', weight: 3, dashArray: '2 6' }).addTo(toolLayer); else mLine.setLatLngs(mPts);
+      L.circleMarker(e.latlng, { radius: 5, color: '#fff', weight: 2, fillColor: '#7c3aed', fillOpacity: 1 }).addTo(toolLayer);
+      if (mPts.length > 1) {
+        var km = turf.length(turf.lineString(mPts.map(function (p) { return [p[1], p[0]]; })), { units: 'kilometers' });
+        $('measOut').textContent = 'Distance: ' + (km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(2) + ' km') + ' (straight-line segments)';
+      }
+    }
+  });
+
+  /* ---------- Replay journey ---------- */
+  function stopReplay() { if (replayTimer) { clearInterval(replayTimer); replayTimer = null; } }
+  $('btnReplay').onclick = function () {
+    if (S.mode !== 'idle') { toast('Stop tracking first, then replay your journey.'); return; }
+    if (S.pts.length < 2) { toast('Record a journey first (at least 2 points).'); return; }
+    stopReplay();
+    var line = L.polyline([], { color: '#f59e0b', weight: 7, opacity: 0.95 }).addTo(toolLayer);
+    var mk = L.circleMarker([S.pts[0].lat, S.pts[0].lon], { radius: 9, color: '#fff', weight: 3, fillColor: '#f59e0b', fillOpacity: 1 }).addTo(toolLayer);
+    map.fitBounds(trail.getBounds().pad(0.2));
+    var i = 0, step = Math.max(1, Math.ceil(S.pts.length / 80));
+    replayTimer = setInterval(function () {
+      if (i >= S.pts.length) { stopReplay(); setTimeout(function () { toolLayer.removeLayer(line); toolLayer.removeLayer(mk); }, 1500); return; }
+      var p = S.pts[i]; line.addLatLng([p.lat, p.lon]); mk.setLatLng([p.lat, p.lon]); i += step;
+    }, 120);
+    toast('Replaying your journey…');
+  };
+
+  /* ---------- Where am I? / Search / Share ---------- */
+  $('btnWhere').onclick = function () {
+    if (!S.last) { toast('Start tracking first so there is a position to look up.'); return; }
+    $('whereOut').textContent = 'Looking up the address…';
+    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=' + S.last.lat + '&lon=' + S.last.lon)
+      .then(function (r) { return r.json(); })
+      .then(function (j) { $('whereOut').textContent = 'You are near: ' + (j.display_name || 'no address found for this spot') + '. (Looked up via OpenStreetMap Nominatim.)'; })
+      .catch(function () { $('whereOut').textContent = 'Could not look up the address. Check your connection.'; });
+  };
+  $('searchForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = $('searchInput').value.trim(); if (!q) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (a) {
+        if (!a.length) { toast('Place not found. Try a different name.'); return; }
+        var ll = [+a[0].lat, +a[0].lon];
+        var mk = L.circleMarker(ll, { radius: 9, color: '#fff', weight: 3, fillColor: '#7c3aed', fillOpacity: 1 }).addTo(toolLayer);
+        var pop = document.createElement('div'); pop.textContent = a[0].display_name; mk.bindPopup(pop).openPopup();
+        map.setView(ll, 14);
+      }).catch(function () { toast('Search failed. Check your connection.'); });
+  });
+  $('btnShare').onclick = function () {
+    if (!S.last || S.last.src !== 'gps') { toast('Start GPS tracking first to share your real position.'); return; }
+    var url = location.origin + location.pathname + '?lat=' + S.last.lat.toFixed(5) + '&lon=' + S.last.lon.toFixed(5);
+    if (navigator.share) { navigator.share({ title: 'My location', text: 'My position on GeoTrack (snapshot)', url: url }).catch(function () { /* cancelled */ }); }
+    else if (navigator.clipboard) { navigator.clipboard.writeText(url).then(function () { toast('Snapshot link copied. It shows where you are right now.'); }); }
+    else toast(url);
+  };
+  (function openShared() {
+    var q = new URLSearchParams(location.search), lat = parseFloat(q.get('lat')), lon = parseFloat(q.get('lon'));
+    if (isFinite(lat) && isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+      var mk = L.circleMarker([lat, lon], { radius: 10, color: '#fff', weight: 3, fillColor: '#7c3aed', fillOpacity: 1 }).addTo(toolLayer);
+      var pop = document.createElement('div'); pop.textContent = 'Shared position (snapshot)'; mk.bindPopup(pop).openPopup();
+      map.setView([lat, lon], 16);
+    }
+  })();
+
   /* ---------- Export / clear ---------- */
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
   $('btnExport').onclick = function () {
     if (!S.pts.length && !S.ip && !S.fence) { toast('Nothing to export yet.'); return; }
     var feats = [];
@@ -509,15 +743,22 @@
     });
     if (S.ip) feats.push(turf.point([S.ip.lon, S.ip.lat], { name: 'ip_estimate', city: S.ip.city, country: S.ip.country }));
     if (S.fence) feats.push(turf.circle([S.fence.lon, S.fence.lat], S.fence.r / 1000, { steps: 64, units: 'kilometers', properties: { name: 'geofence', radius_m: S.fence.r } }));
-    var blob = new Blob([JSON.stringify(turf.featureCollection(feats), null, 2)], { type: 'application/geo+json' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'geotrack-export.geojson';
-    document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    download('geotrack-export.geojson', JSON.stringify(turf.featureCollection(feats), null, 2), 'application/geo+json');
     toast('Exported as GeoJSON. Open it in QGIS or geojson.io.');
   };
+  $('btnCsv').onclick = function () {
+    if (!S.pts.length) { toast('No tracked points to export yet.'); return; }
+    var rows = ['index,time,latitude,longitude,accuracy_m,speed_kmh,source'];
+    S.pts.forEach(function (p, i) { rows.push([i, new Date(p.t).toISOString(), p.lat, p.lon, Math.round(p.acc || 0), (p.speed * 3.6).toFixed(2), p.src].join(',')); });
+    download('geotrack-points.csv', rows.join('\n'), 'text/csv');
+    toast('Exported as CSV. Open it in Excel.');
+  };
   $('btnClear').onclick = function () {
-    stopAll(); resetData(); S.ip = null; S.fence = null; ipLayer.clearLayers(); fenceLayer.clearLayers();
+    stopAll(); resetData(); S.ip = null; S.fence = null; ipLayer.clearLayers(); fenceLayer.clearLayers(); toolLayer.clearLayers();
+    mPts = []; mLine = null; setMeasure(false);
     ['ipAddr', 'ipIsp', 'ipCity', 'ipCountry', 'ipLat', 'ipLon'].forEach(function (id) { $(id).textContent = '–'; });
-    $('ipMsg').textContent = ''; $('fenceLog').innerHTML = '<li style="color:var(--mute)">No geofence events yet.</li>';
+    $('ipMsg').textContent = ''; $('whereOut').textContent = ''; $('measOut').textContent = '';
+    $('fenceLog').innerHTML = '<li style="color:var(--mute)">No geofence events yet.</li>';
     updateGap(); toast('All data cleared.');
   };
 
